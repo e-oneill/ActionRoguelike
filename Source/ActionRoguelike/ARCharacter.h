@@ -29,6 +29,16 @@ protected:
 
 	//input functions
 	void MoveForward(float value);
+	void Strafe(float value);
+
+	//combat functions
+	void Primary();
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<AActor> ProjectileClass;
+
+	UPROPERTY(EditAnywhere)
+	UAnimMontage* PrimaryFireAnim;
 
 public:	
 	// Called every frame

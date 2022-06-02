@@ -4,6 +4,7 @@
 #include "ARCharacter.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 // Sets default values
 AARCharacter::AARCharacter()
 {
@@ -11,11 +12,12 @@ AARCharacter::AARCharacter()
 	PrimaryActorTick.bCanEverTick = true;
 
 	ThirdPersonCameraArm = CreateDefaultSubobject<USpringArmComponent>("ThirdPersonSpringArm");
-
+	ThirdPersonCameraArm->bUsePawnControlRotation = true;
 	ThirdPersonCamera = CreateDefaultSubobject<UCameraComponent>("ThirdPersonCamera");
 	ThirdPersonCameraArm->SetupAttachment(RootComponent);
 	ThirdPersonCamera->SetupAttachment(ThirdPersonCameraArm);
-	
+	bUseControllerRotationYaw = false;
+	GetCharacterMovement()->bOrientRotationToMovement = true;
 }
 
 // Called when the game starts or when spawned
@@ -27,7 +29,29 @@ void AARCharacter::BeginPlay()
 
 void AARCharacter::MoveForward(float value)
 {
-	AddMovementInput(GetActorForwardVector(), value);
+	//we want the forward key to move the character in the direction the camera is pointing as we have split the actor rotation and camera rotation
+	FRotator ControlRotation = GetControlRotation();
+	ControlRotation.Pitch = 0.0f;
+	ControlRotation.Roll = 0.0f;
+	AddMovementInput(ControlRotation.Vector(), value);
+}
+
+void AARCharacter::Strafe(float value)
+{
+	//to strafe we need to get the right vector of the controller rotation
+	//the code I'm using is taken from KismetMathLibrary::GetRightVector
+	FRotator ControlRotation = GetControlRotation();
+	FVector ControlRightVector = FRotationMatrix(ControlRotation).GetScaledAxis(EAxis::Y);
+	AddMovementInput(ControlRightVector, value);
+}
+
+void AARCharacter::Primary()
+{
+	FTransform ProjectileSpawnTransform = FTransform(GetControlRotation(), GetMesh()->GetSocketLocation("Muzzle_01"));
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn; 
+	PlayAnimMontage(PrimaryFireAnim);
+	GetWorld()->SpawnActor<AActor>(ProjectileClass, ProjectileSpawnTransform, SpawnParams);
 }
 
 // Called every frame
@@ -45,6 +69,11 @@ void AARCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 	PlayerInputComponent->BindAxis("MoveForward", this, &AARCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
+	PlayerInputComponent->BindAxis("Pitch", this, &APawn::AddControllerPitchInput);
+	PlayerInputComponent->BindAxis("Strafe", this, &AARCharacter::Strafe);
+
+	PlayerInputComponent->BindAction("Primary", IE_Pressed, this, &AARCharacter::Primary);
+	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 }
 
 
