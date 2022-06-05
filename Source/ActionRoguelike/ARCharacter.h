@@ -7,6 +7,8 @@
 #include "ARCharacter.generated.h"
 class UCameraComponent;
 class USpringArmComponent;
+class UARInteractionComponent;
+class UARAttributeComponent;
 UCLASS()
 class ACTIONROGUELIKE_API AARCharacter : public ACharacter
 {
@@ -23,6 +25,11 @@ protected:
 	UPROPERTY(VisibleAnywhere)
 	USpringArmComponent* ThirdPersonCameraArm;
 
+	UPROPERTY(VisibleAnywhere)
+		UARInteractionComponent* InteractionComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UARAttributeComponent* AttributeComponent;
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
@@ -30,15 +37,34 @@ protected:
 	//input functions
 	void MoveForward(float value);
 	void Strafe(float value);
+	/// <summary>
+	///		This function sets a new target zoom for the player's camera, clamped between a minimum and maximum value
+	/// </summary>
+	void ZoomCamera(float value);
+	bool bZoomCamera;
+	float TargetZoom;
+	void Interact();
+	UPROPERTY(BlueprintReadOnly)
+	bool bCanInteract;
 
 	//combat functions
 	void Primary();
+	//Timer used to track when the primary attack should be fired
+	FTimerHandle PrimaryAttackTimer;
+	//Timer used to give primary attack a cooldown
+	float attackTime;
+	UFUNCTION()
+	void PrimaryAttack();
+	
 
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<AActor> ProjectileClass;
 
 	UPROPERTY(EditAnywhere)
 	UAnimMontage* PrimaryFireAnim;
+
+	//interpolation functions
+	void InterpCameraZoom(float deltaTime);
 
 public:	
 	// Called every frame
